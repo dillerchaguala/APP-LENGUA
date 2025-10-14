@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -31,9 +32,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -50,7 +54,6 @@ import kotlinx.coroutines.launch
 
 // --- Modelo de Estado, ViewModel y Factory ---
 
-// PASO 3: ProfileUserState actualizado
 data class ProfileUserState(
     val fullName: String = "Usuario",
     val email: String = "",
@@ -61,7 +64,6 @@ data class ProfileUserState(
     val city: String = "",
     val role: String = "Estudiante",
     val englishLevel: String = "",
-    // ✅ NUEVOS CAMPOS:
     val birthDate: String = "",
     val address: String = "",
     val learningGoals: String = "",
@@ -76,17 +78,12 @@ class ProfileViewModel(private val authRepository: AuthRepository) : ViewModel()
     private val _uiState = MutableStateFlow<ProfileUserState?>(null)
     val uiState: StateFlow<ProfileUserState?> = _uiState.asStateFlow()
 
-    private val _isLoading = MutableStateFlow(true)
+    private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    init {
-        loadUserProfile()
-    }
-
-    // PASO 4: ViewModel actualizado
     fun loadUserProfile() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -103,7 +100,6 @@ class ProfileViewModel(private val authRepository: AuthRepository) : ViewModel()
                         city = user.city,
                         role = user.role.replaceFirstChar { it.uppercase() },
                         englishLevel = user.englishLevel,
-                        // ✅ MAPEAR NUEVOS CAMPOS:
                         birthDate = user.birthDate,
                         address = user.address,
                         learningGoals = user.learningGoals,
@@ -147,6 +143,20 @@ fun ProfileScreen(
     val isLoading by profileViewModel.isLoading.collectAsState()
     val error by profileViewModel.error.collectAsState()
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            // ✅ LÓGICA CORREGIDA: Recargar SIEMPRE que la pantalla aparezca.
+            if (event == Lifecycle.Event.ON_RESUME) {
+                profileViewModel.loadUserProfile()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -157,7 +167,7 @@ fun ProfileScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* TODO: Navegar a la pantalla de edición */ }) {
+                    IconButton(onClick = { navController.navigate("edit_profile_screen") }) {
                         Icon(Icons.Default.Edit, contentDescription = "Editar Perfil")
                     }
                 }
@@ -170,7 +180,8 @@ fun ProfileScreen(
                 .padding(paddingValues)
         ) {
             when {
-                isLoading -> {
+                // Muestra el loading solo la primera vez (cuando el estado es nulo)
+                isLoading && userState == null -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 error != null -> {
@@ -181,6 +192,8 @@ fun ProfileScreen(
                     )
                 }
                 userState != null -> {
+                    // Muestra los datos (incluso si son viejos) mientras se recargan,
+                    // evitando que la pantalla parpadee en blanco.
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -196,10 +209,15 @@ fun ProfileScreen(
                         item { Spacer(modifier = Modifier.height(16.dp)) }
                     }
                 }
+                // Si no hay estado, ni error, ni está cargando, muestra el spinner como fallback.
+                else -> {
+                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
             }
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -252,7 +270,6 @@ fun ProfileHeader(userState: ProfileUserState) {
     }
 }
 
-// PASO 5: Secciones de UI actualizadas
 @Composable
 fun PersonalInfoSection(userState: ProfileUserState) {
     ProfileSection(
@@ -264,7 +281,6 @@ fun PersonalInfoSection(userState: ProfileUserState) {
         ProfileField("Teléfono", userState.phone.ifEmpty { "No especificado" })
         ProfileField("País", userState.country.ifEmpty { "No especificado" })
         ProfileField("Ciudad", userState.city.ifEmpty { "No especificado" })
-        // ✅ NUEVOS CAMPOS:
         ProfileField(
             "Fecha de Nacimiento", 
             userState.birthDate.ifEmpty { "No especificada" }
@@ -291,7 +307,6 @@ fun AcademicInfoSection(userState: ProfileUserState) {
             userState.englishLevel.ifEmpty { "No evaluado" }
         )
         ProfileField("Rol", userState.role)
-        // ✅ MOSTRAR BLOQUE ASIGNADO:
         ProfileField(
             "Bloque Asignado", 
             userState.bloqueAsignado.ifEmpty { "No asignado" }
@@ -302,9 +317,6 @@ fun AcademicInfoSection(userState: ProfileUserState) {
         )
     }
 }
-
-
-// --- Componentes de UI de Ayuda ---
 
 @Composable
 fun ProfileSection(title: String, icon: ImageVector, content: @Composable ColumnScope.() -> Unit) {
