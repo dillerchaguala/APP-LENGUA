@@ -5,27 +5,20 @@ import com.example.lengua.data.LoginResponse
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
-import okhttp3.ResponseBody
-import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.Response
+import retrofit2.http.Path
 
 // --- Modelos de Datos para el Perfil ---
+@Serializable
+data class UserProfileResponse(val success: Boolean, val user: User)
 
 @Serializable
-data class UserProfileResponse(
-    val success: Boolean,
-    val user: User
-)
-
-@Serializable
-data class UpdateProfileResponse(
-    val success: Boolean,
-    val user: User
-)
+data class UpdateProfileResponse(val success: Boolean, val user: User)
 
 @Serializable
 data class User(
@@ -49,59 +42,55 @@ data class User(
     @SerialName("correo_personal") val correoPersonal: String = ""
 )
 
-// --- Modelos de Datos para las Clases ---
-
+// --- Modelos de Datos para las Clases (RESTAURADO) ---
 @Serializable
-data class ClassesResponse(
-    val success: Boolean,
-    val total: Int,
-    val clases: List<Clase>
-)
+data class ClassesResponse(val success: Boolean, val total: Int, val clases: List<Clase>)
 
 @Serializable
 data class Clase(
-    val id: Int,
-    val nombre: String,
-    val profesor: String,
-    val fecha: String,
-    val hora: String,
-    val duracion: Int,
-    val tema: String,
-    val descripcion: String? = null,
-    @SerialName("tipo_clase") val tipoClase: String,
-    val modalidad: String,
-    @SerialName("meet_link") val meetLink: String? = null,
-    val estado: String,
+    val id: Int, val nombre: String, val profesor: String, val fecha: String, val hora: String,
+    val duracion: Int, val tema: String, val descripcion: String? = null,
+    @SerialName("tipo_clase") val tipoClase: String, val modalidad: String,
+    @SerialName("meet_link") val meetLink: String? = null, val estado: String,
     @SerialName("created_at") val createdAt: String
 )
 
-// --- Modelos de Datos para las Evaluaciones ---
-
+// --- Modelos de Datos para las Evaluaciones (RESTAURADO) ---
 @Serializable
-data class EvaluationsResponse(
-    val success: Boolean,
-    val total: Int,
-    val evaluaciones: List<Evaluation>
-)
+data class EvaluationsResponse(val success: Boolean, val total: Int, val evaluaciones: List<Evaluation>, val message: String? = null)
 
 @Serializable
 data class Evaluation(
-    val id: Int,
-    val titulo: String,
-    val descripcion: String?,
-    val tipo: String,  // "quiz", "examen", "tarea"
-    val profesor: String,
-    @SerialName("fecha_limite") val fechaLimite: String,
-    @SerialName("archivo_url") val archivoUrl: String?,
-    @SerialName("estado_estudiante") val estadoEstudiante: String,  // "pendiente", "entregada"
-    @SerialName("fecha_entrega") val fechaEntrega: String?,
-    val calificacion: Float?,  // Puede ser null
-    @SerialName("created_at") val createdAt: String
+    val id: Int, val titulo: String, val descripcion: String?, val tipo: String, val profesor: String,
+    @SerialName("fecha_limite") val fechaLimite: String, @SerialName("archivo_url") val archivoUrl: String?,
+    @SerialName("estado_estudiante") val estadoEstudiante: String, @SerialName("fecha_entrega") val fechaEntrega: String?,
+    val calificacion: Float?, @SerialName("created_at") val createdAt: String
 )
 
+// --- Modelos de Datos para los Bloques (RESTAURADO) ---
+@Serializable
+data class Bloque(
+    val id: Int, val nombre: String, val nivel: String, val estado: String,
+    @SerialName("grupo_color") val grupoColor: String, @SerialName("horario_inicio") val horarioInicio: String?,
+    @SerialName("horario_fin") val horarioFin: String?, @SerialName("cupo_maximo") val cupoMaximo: Int,
+    val activo: Boolean, @SerialName("estudiantes_count") val estudiantesCount: Int,
+    @SerialName("created_at") val createdAt: String, @SerialName("updated_at") val updatedAt: String
+)
+
+@Serializable
+data class BloquesResponse(val success: Boolean, val total: Int, val bloques: List<Bloque>)
+
+@Serializable
+data class BloqueDetailResponse(val success: Boolean, val bloque: Bloque)
+
+@Serializable
+data class BloqueCreateRequest(
+    val nombre: String, val nivel: String, @SerialName("grupo_color") val grupoColor: String,
+    @SerialName("horario_inicio") val horarioInicio: String? = null, @SerialName("horario_fin") val horarioFin: String? = null,
+    @SerialName("cupo_maximo") val cupoMaximo: Int = 20, val estado: String = "configurado", val activo: Boolean = true
+)
 
 // --- Interfaz del Servicio API ---
-
 interface ApiService {
     @POST("login/")
     suspend fun login(@Body request: LoginRequest): LoginResponse
@@ -110,19 +99,30 @@ interface ApiService {
     suspend fun getUserProfile(@Header("Authorization") token: String): UserProfileResponse
 
     @PUT("profile/update/")
-    suspend fun updateUserProfile(
-        @Header("Authorization") token: String,
-        @Body profileData: Map<String, String>
-    ): UpdateProfileResponse
+    suspend fun updateUserProfile(@Header("Authorization") token: String, @Body profileData: Map<String, String>): UpdateProfileResponse
 
+    // --- Endpoints Restaurados ---
     @GET("classes/")
     suspend fun getUserClasses(@Header("Authorization") token: String): ClassesResponse
 
-    // ✅ ENDPOINT MODIFICADO PARA SER FLEXIBLE
     @GET("evaluations/")
     suspend fun getUserEvaluations(@Header("Authorization") token: String): JsonElement
 
-    // Método de depuración (opcional, se puede mantener o eliminar)
-    @GET("auth/profile/")
-    suspend fun getUserProfileRaw(@Header("Authorization") token: String): Response<ResponseBody>
+    @GET("bloques/")
+    suspend fun getBloques(@Header("Authorization") token: String): BloquesResponse
+
+    @POST("bloques/create/")
+    suspend fun createBloque(@Header("Authorization") token: String, @Body bloque: BloqueCreateRequest): BloqueDetailResponse
+
+    @GET("bloques/{id}/")
+    suspend fun getBloqueDetail(@Header("Authorization") token: String, @Path("id") id: Int): BloqueDetailResponse
+
+    @PUT("bloques/{id}/update/")
+    suspend fun updateBloque(@Header("Authorization") token: String, @Path("id") id: Int, @Body bloque: BloqueCreateRequest): BloqueDetailResponse
+
+    @POST("bloques/{id}/toggle/")
+    suspend fun toggleBloque(@Header("Authorization") token: String, @Path("id") id: Int): BloqueDetailResponse
+
+    @POST("bloques/{id}/delete/")
+    suspend fun deleteBloque(@Header("Authorization") token: String, @Path("id") id: Int): Response<Unit>
 }

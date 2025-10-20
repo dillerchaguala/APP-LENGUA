@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.lengua.data.repository.AuthRepository
+import com.example.lengua.data.repository.LoginSuccessData
 import com.example.lengua.data.repository.Result
 import com.example.lengua.data.repository.SessionManager
 import com.example.lengua.network.RetrofitInstance
@@ -17,7 +18,8 @@ import kotlinx.coroutines.launch
 
 data class LoginState(
     val isLoading: Boolean = false,
-    val loginResult: Result<String>? = null // Puede ser Success o Error
+    // ✅ TIPO DE DATO MODIFICADO
+    val loginResult: Result<LoginSuccessData>? = null
 )
 
 // --- ViewModel y Factory --- //
@@ -29,13 +31,8 @@ class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
 
     fun login(username: String, password: String) {
         viewModelScope.launch {
-            // 1. Inicia el estado de carga
             _uiState.value = LoginState(isLoading = true)
-            
-            // 2. Llama al repositorio
             val result = authRepository.login(username, password)
-            
-            // 3. Actualiza el estado con el resultado (éxito o error)
             _uiState.value = LoginState(isLoading = false, loginResult = result)
         }
     }

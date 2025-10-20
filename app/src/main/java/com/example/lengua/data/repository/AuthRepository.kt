@@ -6,8 +6,7 @@ import android.util.Log
 import com.example.lengua.data.LoginRequest
 import com.example.lengua.network.*
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
 
 private const val APP_TAG = "LENGUA_APP"
@@ -16,6 +15,9 @@ sealed class Result<out T> {
     data class Success<out T>(val data: T) : Result<T>()
     data class Error(val message: String) : Result<Nothing>()
 }
+
+// ✅ NUEVO DATA CLASS
+data class LoginSuccessData(val token: String, val role: String)
 
 class SessionManager(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("LenguaPrefs", Context.MODE_PRIVATE)
@@ -41,11 +43,13 @@ class AuthRepository(private val apiService: ApiService, private val sessionMana
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun login(username: String, password: String): Result<String> {
+    // ✅ FUNCIÓN LOGIN MODIFICADA
+    suspend fun login(username: String, password: String): Result<LoginSuccessData> {
         return try {
             val response = apiService.login(LoginRequest(username, password))
             sessionManager.saveToken(response.token)
-            Result.Success(response.token)
+            // Ahora devolvemos un objeto con token y rol
+            Result.Success(LoginSuccessData(token = response.token, role = response.role ?: "student"))
         } catch (e: Exception) {
             Result.Error(e.message ?: "Error de login desconocido")
         }
@@ -88,22 +92,25 @@ class AuthRepository(private val apiService: ApiService, private val sessionMana
         val token = sessionManager.getToken() ?: return Result.Error("No hay token de autenticación")
         return try {
             val jsonElement = apiService.getUserEvaluations("Bearer $token")
-            
-            when (jsonElement) {
-                is JsonObject -> {
-                    val response = json.decodeFromJsonElement<EvaluationsResponse>(jsonElement)
-                    if (response.success) Result.Success(response.evaluaciones) else Result.Error("El backend indicó un error al obtener evaluaciones")
-                }
-                is JsonArray -> {
-                    // ✅ LÓGICA MEJORADA: Decodifica la lista directamente
-                    val evaluations = json.decodeFromJsonElement<List<Evaluation>>(jsonElement)
-                    Result.Success(evaluations)
-                }
-                else -> Result.Error("Respuesta inesperada del servidor para evaluaciones")
+            val response = json.decodeFromJsonElement<EvaluationsResponse>(jsonElement)
+            if (response.success) {
+                Result.Success(response.evaluaciones)
+            } else {
+                Result.Error(response.message ?: "Error al obtener evaluaciones")
             }
         } catch (e: Exception) {
-            Log.e(APP_TAG, "Error en getUserEvaluations", e)
-            Result.Error(e.message ?: "Error de red al obtener evaluaciones")
+            Result.Error(e.message ?: "Error de conexión")
+        }
+    }
+
+    suspend fun getBloques(): Result<List<Bloque>> {
+        val token = sessionManager.getToken() ?: return Result.Error("No hay token de autenticación")
+        return try {
+            val response = apiService.getBloques("Bearer $token")
+            if (response.success) Result.Success(response.bloques) else Result.Error("Error del backend al obtener bloques")
+        } catch (e: Exception) {
+            Log.e(APP_TAG, "Error en getBloques", e)
+            Result.Error(e.message ?: "Error de red al obtener bloques")
         }
     }
 

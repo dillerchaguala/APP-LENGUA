@@ -25,27 +25,35 @@ fun LearningSectionScreen() {
     val scope = rememberCoroutineScope()
     val navController = rememberNavController()
 
+    // ✅ Items para el NUEVO menú de hamburguesa específico de esta sección
     val items = listOf(
-        "scheduled_classes" to Icons.Default.Book,
-        "evaluations" to Icons.Default.Assessment,
-        "club" to Icons.Default.Group
+        "Clases Programadas" to Icons.Default.Book,
+        "Evaluaciones" to Icons.Default.Assessment,
+        "Club" to Icons.Default.Group
     )
-    var selectedItem by remember { mutableStateOf(items[0]) }
+    // Rutas correspondientes a los items
+    val routes = listOf("scheduled_classes", "evaluations", "club")
+
+    var selectedItemIndex by remember { mutableStateOf(0) }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
                 Spacer(Modifier.height(12.dp))
-                items.forEach { item ->
+                items.forEachIndexed { index, item ->
                     NavigationDrawerItem(
-                        icon = { Icon(item.second, contentDescription = null) },
-                        label = { Text(item.first.replaceFirstChar { it.uppercase().replace("_", " ") }) },
-                        selected = item == selectedItem,
+                        icon = { Icon(item.second, contentDescription = item.first) },
+                        label = { Text(item.first) },
+                        selected = index == selectedItemIndex,
                         onClick = {
                             scope.launch { drawerState.close() }
-                            selectedItem = item
-                            navController.navigate(item.first) { launchSingleTop = true }
+                            selectedItemIndex = index
+                            navController.navigate(routes[index]) { 
+                                // Limpia el backstack para no acumular pantallas
+                                popUpTo(navController.graph.startDestinationId)
+                                launchSingleTop = true
+                            }
                         },
                         modifier = Modifier.padding(horizontal = 12.dp)
                     )
@@ -53,47 +61,23 @@ fun LearningSectionScreen() {
             }
         }
     ) { 
-        NavHost(navController = navController, startDestination = "scheduled_classes") {
-            composable("scheduled_classes") {
+        // ✅ NavHost interno para gestionar la navegación de esta sección
+        NavHost(navController = navController, startDestination = routes[0]) {
+            composable(routes[0]) {
+                // Pasamos la acción para abrir ESTE menú, no el principal
                 ScheduledClassesScreen(onMenuClick = { 
                     scope.launch { drawerState.open() } 
                 })
             }
-            composable("evaluations") {
-                Scaffold(
-                    topBar = { 
-                        TopAppBar(
-                            title = { Text("Evaluaciones") },
-                            navigationIcon = { 
-                                IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                    Icon(Icons.Default.Menu, contentDescription = "Menú")
-                                }
-                            }
-                        )
-                    }
-                ) { padding ->
-                    Box(modifier = Modifier.padding(padding)){
-                        EvaluationsScreen()
-                    }
-                }
+            composable(routes[1]) {
+                EvaluationsScreen(onMenuClick = { 
+                    scope.launch { drawerState.open() } 
+                })
             }
-            composable("club") {
-                Scaffold(
-                    topBar = { 
-                        TopAppBar(
-                            title = { Text("Club") },
-                            navigationIcon = { 
-                                IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                    Icon(Icons.Default.Menu, contentDescription = "Menú")
-                                }
-                            }
-                        )
-                    }
-                ) { padding ->
-                    Box(modifier = Modifier.padding(padding)){
-                        ClubScreen()
-                    }
-                }
+            composable(routes[2]) {
+                ClubScreen(onMenuClick = { 
+                    scope.launch { drawerState.open() } 
+                })
             }
         }
     }

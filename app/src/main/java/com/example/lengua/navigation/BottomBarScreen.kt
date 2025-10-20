@@ -1,43 +1,39 @@
 package com.example.lengua.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.ui.graphics.vector.ImageVector
 
-// Objeto sellado que define cada pantalla en la barra de navegación inferior
+// REVERTIDO: Define los elementos correctos de la barra de navegación
 sealed class BottomBarScreen(
     val route: String,
     val title: String,
     val icon: ImageVector
 ) {
-    // Pantalla de Inicio
     object Home : BottomBarScreen(
-        route = "home_dashboard",
+        route = "home",
         title = "Home",
         icon = Icons.Default.Home
     )
 
-    // Pantalla de Clases
-    object Classes : BottomBarScreen(
-        route = "classes",
-        title = "Classes",
-        icon = Icons.AutoMirrored.Filled.MenuBook
+    object Evaluations : BottomBarScreen(
+        route = "evaluations",
+        title = "Evaluations",
+        icon = Icons.Default.Book
     )
 
-    // Pantalla de "Security" (marcador de posición)
     object Security : BottomBarScreen(
         route = "security",
         title = "Security",
         icon = Icons.Default.Security
     )
 
-    // Pantalla de "Fitness" (marcador de posición)
-    object Fitness : BottomBarScreen(
-        route = "fitness",
-        title = "Fitness",
-        icon = Icons.Default.FitnessCenter
+    object Progress : BottomBarScreen(
+        route = "progress",
+        title = "Progress",
+        icon = Icons.Default.Dashboard
     )
 }
