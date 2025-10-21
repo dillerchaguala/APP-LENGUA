@@ -16,6 +16,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.lengua.screen.AdminDashboardScreen
 import com.example.lengua.screen.HomeScreen
 import com.example.lengua.screen.LoginScreen
+import com.example.lengua.screen.ProfessorDashboardScreen // ✅ IMPORTACIÓN AÑADIDA
 import com.example.lengua.screen.ProfileScreen
 import com.example.lengua.screen.SplashScreen
 import com.example.lengua.ui.theme.LenguaTheme
@@ -49,20 +50,18 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
+                    // ✅ RUTA DEL PROFESOR CORREGIDA
                     composable("teacher_dashboard_screen") {
-                        // TODO: Crear la pantalla para el profesor
-                        PlaceholderScreen(name = "Profesor Dashboard")
+                        ProfessorDashboardScreen(
+                            onLogout = {
+                                navController.navigate("main_screen") {
+                                    popUpTo("splash_screen") { inclusive = true }
+                                }
+                            }
+                        )
                     }
                 }
             }
         }
-    }
-}
-
-// Composable temporal para evitar crashes
-@Composable
-fun PlaceholderScreen(name: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = "Pantalla: $name")
     }
 }

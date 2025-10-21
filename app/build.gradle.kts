@@ -2,8 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    // CORREGIDO: Se reemplaza el alias incorrecto por el ID oficial del plugin.
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.0" // Añadir versión por si acaso
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.0"
 }
 
 android {
@@ -56,14 +55,13 @@ dependencies {
     // Íconos extendidos de Material
     implementation("androidx.compose.material:material-icons-extended")
 
-    // Retrofit & Kotlinx Serialization (La configuración correcta para nuestro proyecto)
+    // Retrofit & Kotlinx Serialization
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
-    // ELIMINADAS: Las siguientes líneas causaban el conflicto y el crash.
-    // implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    // implementation("com.google.code.gson:gson:2.10.1")
+    // ✅ DEPENDENCIA DE OKHTTP AÑADIDA
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

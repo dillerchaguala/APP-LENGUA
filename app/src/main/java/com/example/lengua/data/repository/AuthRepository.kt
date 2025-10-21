@@ -9,49 +9,95 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
 
-private const val APP_TAG = "LENGUA_APP"
-
+// Clase sellada para manejar los resultados de la API
 sealed class Result<out T> {
     data class Success<out T>(val data: T) : Result<T>()
     data class Error(val message: String) : Result<Nothing>()
 }
 
-// ✅ NUEVO DATA CLASS
+// Modelo para el resultado de un login exitoso
 data class LoginSuccessData(val token: String, val role: String)
 
+// --- SessionManager CON LOGS DETALLADOS ---
 class SessionManager(context: Context) {
-    private val prefs: SharedPreferences = context.getSharedPreferences("LenguaPrefs", Context.MODE_PRIVATE)
+    // Usamos el nombre de preferencias "lengua_prefs" como sugiere la guía
+    private val prefs: SharedPreferences = context.getSharedPreferences("lengua_prefs", Context.MODE_PRIVATE)
 
     companion object {
-        private const val AUTH_TOKEN = "auth_token"
+        private const val KEY_TOKEN = "auth_token"
     }
 
     fun saveToken(token: String) {
-        prefs.edit().putString(AUTH_TOKEN, token).apply()
+        Log.d("SessionManager", "💾 Guardando token: ${token.take(20)}...")
+        prefs.edit().putString(KEY_TOKEN, token).apply()
+        
+        // Verificación inmediata para asegurar que se guardó
+        val saved = prefs.getString(KEY_TOKEN, null)
+        Log.d("SessionManager", "✅ Token guardado y verificado: ${saved?.take(20)}...")
     }
 
     fun getToken(): String? {
-        return prefs.getString(AUTH_TOKEN, null)
+        val token = prefs.getString(KEY_TOKEN, null)
+        Log.d("SessionManager", "📖 Recuperando token: ${token?.take(20) ?: "NULL"}")
+        return token
     }
 
     fun clearToken() {
-        prefs.edit().remove(AUTH_TOKEN).apply()
+        Log.d("SessionManager", "🗑️ Eliminando token")
+        prefs.edit().remove(KEY_TOKEN).apply()
     }
 }
 
+// --- AuthRepository CON LOGS DETALLADOS ---
 class AuthRepository(private val apiService: ApiService, private val sessionManager: SessionManager) {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    // ✅ FUNCIÓN LOGIN MODIFICADA
     suspend fun login(username: String, password: String): Result<LoginSuccessData> {
         return try {
+            Log.d("AuthRepo", "🔐 Intentando login con: $username")
             val response = apiService.login(LoginRequest(username, password))
+            Log.d("AuthRepo", "✅ Login exitoso para ${username}")
+            Log.d("AuthRepo", "🔑 Token recibido: ${response.token.take(20)}...")
+            
+            // Guardar token usando el SessionManager mejorado
             sessionManager.saveToken(response.token)
-            // Ahora devolvemos un objeto con token y rol
+
             Result.Success(LoginSuccessData(token = response.token, role = response.role ?: "student"))
         } catch (e: Exception) {
+            Log.e("AuthRepo", "❌ Error en login: ${e.message}", e)
             Result.Error(e.message ?: "Error de login desconocido")
+        }
+    }
+
+    suspend fun getUserClubs(): Result<List<Club>> {
+        return try {
+            Log.d("AuthRepo", "🔍 Solicitando clubs...")
+            val token = sessionManager.getToken()
+            // El log de "Recuperando token" ya está en SessionManager
+
+            if (token.isNullOrEmpty()) {
+                Log.e("AuthRepo", "❌ Error: El token recuperado es null o vacío.")
+                return Result.Error("No hay token de autenticación")
+            }
+            
+            Log.d("AuthRepo", "📡 Haciendo petición a /api/clubs/ con el token recuperado.")
+            val response = apiService.getUserClubs("Bearer $token")
+            
+            Log.d("AuthRepo", "✅ Respuesta de clubs recibida")
+            Log.d("AuthRepo", "Success: ${response.success}")
+            Log.d("AuthRepo", "Total: ${response.total}")
+            Log.d("AuthRepo", "Clubs: ${response.clubs.size}")
+            
+            if (response.success) {
+                Result.Success(response.clubs)
+            } else {
+                Log.e("AuthRepo", "❌ Error del servidor al obtener clubs: ${response.message}")
+                Result.Error(response.message ?: "Error al obtener clubs")
+            }
+        } catch (e: Exception) {
+            Log.e("AuthRepo", "❌ Excepción en getUserClubs: ${e.message}", e)
+            Result.Error(e.message ?: "Error de conexión")
         }
     }
 
@@ -61,7 +107,6 @@ class AuthRepository(private val apiService: ApiService, private val sessionMana
             val response = apiService.getUserProfile("Bearer $token")
             if (response.success) Result.Success(response.user) else Result.Error("Error del backend al obtener perfil")
         } catch (e: Exception) {
-            Log.e(APP_TAG, "Error en getUserProfile", e)
             Result.Error(e.message ?: "Error de red al obtener perfil")
         }
     }
@@ -72,7 +117,6 @@ class AuthRepository(private val apiService: ApiService, private val sessionMana
             val response = apiService.updateUserProfile("Bearer $token", profileData)
             if (response.success) Result.Success(response.user) else Result.Error("Error del backend al actualizar perfil")
         } catch (e: Exception) {
-            Log.e(APP_TAG, "Error en updateUserProfile", e)
             Result.Error(e.message ?: "Error de red al actualizar perfil")
         }
     }
@@ -83,7 +127,6 @@ class AuthRepository(private val apiService: ApiService, private val sessionMana
             val response = apiService.getUserClasses("Bearer $token")
             if (response.success) Result.Success(response.clases) else Result.Error("Error del backend al obtener clases")
         } catch (e: Exception) {
-            Log.e(APP_TAG, "Error en getUserClasses", e)
             Result.Error(e.message ?: "Error de red al obtener clases")
         }
     }
@@ -93,11 +136,7 @@ class AuthRepository(private val apiService: ApiService, private val sessionMana
         return try {
             val jsonElement = apiService.getUserEvaluations("Bearer $token")
             val response = json.decodeFromJsonElement<EvaluationsResponse>(jsonElement)
-            if (response.success) {
-                Result.Success(response.evaluaciones)
-            } else {
-                Result.Error(response.message ?: "Error al obtener evaluaciones")
-            }
+            if (response.success) Result.Success(response.evaluaciones) else Result.Error(response.message ?: "Error al obtener evaluaciones")
         } catch (e: Exception) {
             Result.Error(e.message ?: "Error de conexión")
         }
@@ -109,7 +148,6 @@ class AuthRepository(private val apiService: ApiService, private val sessionMana
             val response = apiService.getBloques("Bearer $token")
             if (response.success) Result.Success(response.bloques) else Result.Error("Error del backend al obtener bloques")
         } catch (e: Exception) {
-            Log.e(APP_TAG, "Error en getBloques", e)
             Result.Error(e.message ?: "Error de red al obtener bloques")
         }
     }

@@ -42,7 +42,7 @@ data class User(
     @SerialName("correo_personal") val correoPersonal: String = ""
 )
 
-// --- Modelos de Datos para las Clases (RESTAURADO) ---
+// --- Modelos de Datos para las Clases ---
 @Serializable
 data class ClassesResponse(val success: Boolean, val total: Int, val clases: List<Clase>)
 
@@ -55,7 +55,7 @@ data class Clase(
     @SerialName("created_at") val createdAt: String
 )
 
-// --- Modelos de Datos para las Evaluaciones (RESTAURADO) ---
+// --- Modelos de Datos para las Evaluaciones ---
 @Serializable
 data class EvaluationsResponse(val success: Boolean, val total: Int, val evaluaciones: List<Evaluation>, val message: String? = null)
 
@@ -67,7 +67,7 @@ data class Evaluation(
     val calificacion: Float?, @SerialName("created_at") val createdAt: String
 )
 
-// --- Modelos de Datos para los Bloques (RESTAURADO) ---
+// --- Modelos de Datos para los Bloques ---
 @Serializable
 data class Bloque(
     val id: Int, val nombre: String, val nivel: String, val estado: String,
@@ -90,6 +90,40 @@ data class BloqueCreateRequest(
     @SerialName("cupo_maximo") val cupoMaximo: Int = 20, val estado: String = "configurado", val activo: Boolean = true
 )
 
+// --- MODELOS DE DATOS PARA CLUBS ---
+@Serializable
+data class ClubsResponse(
+    // ✅ VALORES POR DEFECTO AÑADIDOS
+    val success: Boolean = false,
+    val total: Int = 0,
+    val clubs: List<Club> = emptyList(),
+    val message: String? = null
+)
+
+@Serializable
+data class Club(
+    val id: Int,
+    val name: String,
+    val description: String,
+    val profesor: String,
+    @SerialName("total_students") val totalStudents: Int,
+    val materials: List<ClubMaterial>,
+    @SerialName("created_at") val createdAt: String
+)
+
+@Serializable
+data class ClubMaterial(
+    val id: Int,
+    val week: String,
+    val title: String,
+    val description: String,
+    @SerialName("resource_type") val resourceType: String,
+    val url: String,
+    @SerialName("file_url") val fileUrl: String,
+    @SerialName("created_at") val createdAt: String
+)
+
+
 // --- Interfaz del Servicio API ---
 interface ApiService {
     @POST("login/")
@@ -101,7 +135,6 @@ interface ApiService {
     @PUT("profile/update/")
     suspend fun updateUserProfile(@Header("Authorization") token: String, @Body profileData: Map<String, String>): UpdateProfileResponse
 
-    // --- Endpoints Restaurados ---
     @GET("classes/")
     suspend fun getUserClasses(@Header("Authorization") token: String): ClassesResponse
 
@@ -110,6 +143,9 @@ interface ApiService {
 
     @GET("bloques/")
     suspend fun getBloques(@Header("Authorization") token: String): BloquesResponse
+    
+    @GET("clubs/")
+    suspend fun getUserClubs(@Header("Authorization") token: String): ClubsResponse
 
     @POST("bloques/create/")
     suspend fun createBloque(@Header("Authorization") token: String, @Body bloque: BloqueCreateRequest): BloqueDetailResponse

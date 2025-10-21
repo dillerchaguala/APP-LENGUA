@@ -1,5 +1,6 @@
 package com.example.lengua.screen
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -19,11 +20,14 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.lengua.R
 import com.example.lengua.data.repository.Result
 
+// --- Pantalla de Login ---
 @Composable
 fun LoginScreen(
     navController: NavController,
@@ -40,8 +44,7 @@ fun LoginScreen(
                 is Result.Success -> {
                     Toast.makeText(context, "Login exitoso", Toast.LENGTH_SHORT).show()
                     
-                    // ✅ LÓGICA FINAL Y CORRECTA
-                    val userRole = it.data.role // Obtenemos el rol directamente
+                    val userRole = it.data.role
 
                     val destination = when (userRole) {
                         "admin" -> "admin_dashboard_screen"

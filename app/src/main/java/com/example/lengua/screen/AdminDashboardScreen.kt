@@ -81,11 +81,13 @@ fun AdminDashboardScreen(onLogout: () -> Unit) {
             }
         ) { paddingValues ->
             Box(modifier = Modifier.padding(paddingValues)) {
+                // ✅ SE AÑADE LA NUEVA RUTA DE NAVEGACIÓN
                 NavHost(navController = navController, startDestination = adminMenuItems.first().route) {
                     composable("blocks") { AdminBlocksScreen() }
                     composable("manage_users") { AdminUsersScreen() }
+                    composable("schedule_classes") { ScheduleClassScreen() } // <-- NUEVA PANTALLA
                     
-                    adminMenuItems.filter { it.route != "blocks" && it.route != "manage_users" }.forEach { item ->
+                    adminMenuItems.filter { it.route !in listOf("blocks", "manage_users", "schedule_classes") }.forEach { item ->
                         composable(item.route) { AdminPlaceholderScreen(title = item.title) }
                     }
                 }
@@ -150,7 +152,7 @@ fun AdminBlocksScreen(viewModel: AdminBlocksViewModel = viewModel(factory = Admi
         Box(modifier = Modifier.padding(padding)) {
             when {
                 uiState.isLoading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                uiState.error != null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Error: ${uiState.error}", color = Color.Red) }
+                uiState.error != null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Error: ${uiState.error}", color = Color.Red) } // ✅ CORREGIDO
                 else -> {
                     LazyColumn(modifier = Modifier.padding(16.dp)) {
                         uiState.blocksByLevel.forEach { (level, blocks) ->
