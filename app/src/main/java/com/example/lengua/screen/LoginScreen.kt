@@ -7,7 +7,13 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,9 +92,12 @@ fun LoginScreen(
                 value = username, onValueChange = { username = it }, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(50),
                 colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = Color(0x33FFFFFF), focusedContainerColor = Color(0x33FFFFFF),
-                    focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
-                    focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = Color.White
+                    unfocusedContainerColor = Color(0x33FFFFFF),
+                    focusedContainerColor = Color(0x33FFFFFF),
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = Color.White
                 ),
                 singleLine = true
             )
@@ -100,9 +109,12 @@ fun LoginScreen(
                 value = password, onValueChange = { password = it }, visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(50),
                 colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = Color(0x33FFFFFF), focusedContainerColor = Color(0x33FFFFFF),
-                    focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
-                    focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = Color.White
+                    unfocusedContainerColor = Color(0x33FFFFFF),
+                    focusedContainerColor = Color(0x33FFFFFF),
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = Color.White
                 ),
                 singleLine = true
             )

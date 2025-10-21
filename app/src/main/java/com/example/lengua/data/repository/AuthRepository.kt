@@ -4,7 +4,13 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import com.example.lengua.data.LoginRequest
-import com.example.lengua.network.*
+import com.example.lengua.network.ApiService
+import com.example.lengua.network.Bloque
+import com.example.lengua.network.Clase
+import com.example.lengua.network.Club
+import com.example.lengua.network.Evaluation
+import com.example.lengua.network.EvaluationsResponse
+import com.example.lengua.network.User
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
