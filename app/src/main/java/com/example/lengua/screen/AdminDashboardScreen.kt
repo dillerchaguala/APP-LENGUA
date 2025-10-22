@@ -1,3 +1,4 @@
+
 package com.example.lengua.screen
 
 import androidx.compose.foundation.background
@@ -86,8 +87,9 @@ fun AdminDashboardScreen(onLogout: () -> Unit) {
                     composable("blocks") { AdminBlocksScreen() }
                     composable("manage_users") { AdminUsersScreen() }
                     composable("schedule_classes") { ScheduleClassScreen() } // <-- NUEVA PANTALLA
+                    composable("gallery_management") { GalleryScreen() }
                     
-                    adminMenuItems.filter { it.route !in listOf("blocks", "manage_users", "schedule_classes") }.forEach { item ->
+                    adminMenuItems.filter { it.route !in listOf("blocks", "manage_users", "schedule_classes", "gallery_management") }.forEach { item ->
                         composable(item.route) { AdminPlaceholderScreen(title = item.title) }
                     }
                 }
