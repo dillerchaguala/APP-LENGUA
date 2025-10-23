@@ -88,8 +88,9 @@ fun AdminDashboardScreen(onLogout: () -> Unit) {
                     composable("manage_users") { AdminUsersScreen() }
                     composable("schedule_classes") { ScheduleClassScreen() } // <-- NUEVA PANTALLA
                     composable("gallery_management") { GalleryScreen() }
+                    composable("plans_pricing") { PlansAndPricingScreen() }
                     
-                    adminMenuItems.filter { it.route !in listOf("blocks", "manage_users", "schedule_classes", "gallery_management") }.forEach { item ->
+                    adminMenuItems.filter { it.route !in listOf("blocks", "manage_users", "schedule_classes", "gallery_management", "plans_pricing") }.forEach { item ->
                         composable(item.route) { AdminPlaceholderScreen(title = item.title) }
                     }
                 }
