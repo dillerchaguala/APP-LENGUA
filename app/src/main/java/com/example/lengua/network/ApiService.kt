@@ -55,6 +55,31 @@ data class Clase(
     @SerialName("created_at") val createdAt: String
 )
 
+@Serializable
+data class CreateClassRequest(
+    val nombre: String,
+    val fecha: String,  // "YYYY-MM-DD"
+    val hora: String,   // "HH:MM"
+    val duracion: Int,
+    val tema: String,
+    val modalidad: String,  // "virtual" o "presencial"
+    val descripcion: String = "",
+    @SerialName("tipo_clase")
+    val tipoClase: String = "individual",
+    @SerialName("meet_link")
+    val meetLink: String = "",
+    val estudiantes: List<Int> = emptyList(),
+    val profesor: String? = null // For admins to specify
+)
+
+@Serializable
+data class CreateClassResponse(
+    val success: Boolean,
+    val message: String? = null,
+    val clase: Clase? = null,
+    val errors: Map<String, List<String>>? = null
+)
+
 // --- Modelos de Datos para las Evaluaciones ---
 @Serializable
 data class EvaluationsResponse(val success: Boolean, val total: Int, val evaluaciones: List<Evaluation>, val message: String? = null)
@@ -123,6 +148,48 @@ data class ClubMaterial(
     @SerialName("created_at") val createdAt: String
 )
 
+// --- Modelos de Datos para Profesores y Estudiantes ---
+
+@Serializable
+data class Professor(
+    val id: Int,
+    val username: String,
+    val email: String,
+    @SerialName("first_name")
+    val firstName: String,
+    @SerialName("last_name")
+    val lastName: String,
+    @SerialName("full_name")
+    val fullName: String
+)
+
+@Serializable
+data class ProfessorsResponse(
+    val success: Boolean,
+    val total: Int,
+    val professors: List<Professor>
+)
+
+@Serializable
+data class Student(
+    val id: Int,
+    val username: String,
+    val email: String,
+    @SerialName("first_name")
+    val firstName: String,
+    @SerialName("last_name")
+    val lastName: String,
+    @SerialName("full_name")
+    val fullName: String
+)
+
+@Serializable
+data class StudentsResponse(
+    val success: Boolean,
+    val total: Int,
+    val students: List<Student>
+)
+
 
 // --- Interfaz del Servicio API ---
 interface ApiService {
@@ -161,4 +228,17 @@ interface ApiService {
 
     @POST("bloques/{id}/delete/")
     suspend fun deleteBloque(@Header("Authorization") token: String, @Path("id") id: Int): Response<Unit>
+
+    // Endpoints for scheduling classes - CORRECTED
+    @POST("classes/create/")
+    suspend fun createClass(
+        @Header("Authorization") token: String,
+        @Body request: CreateClassRequest
+    ): CreateClassResponse
+
+    @GET("professors/")
+    suspend fun getProfessors(@Header("Authorization") token: String): ProfessorsResponse
+
+    @GET("students/")
+    suspend fun getStudents(@Header("Authorization") token: String): StudentsResponse
 }
