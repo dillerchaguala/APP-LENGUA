@@ -89,9 +89,9 @@ fun AdminDashboardScreen(onLogout: () -> Unit) {
                     composable("gallery_management") { GalleryScreen() }
                     composable("plans_pricing") { PlansAndPricingScreen() }
                     composable("sales_log") { SalesRecordScreen() }
-                    composable("subscription_management") { SpecializationsScreen() } // <-- CORREGIDO
+                    composable("specializations") { SpecializationsScreen() } // <-- CORREGIDO
                     
-                    val handledRoutes = setOf("blocks", "manage_users", "schedule_classes", "gallery_management", "plans_pricing", "sales_log", "subscription_management")
+                    val handledRoutes = setOf("blocks", "manage_users", "schedule_classes", "gallery_management", "plans_pricing", "sales_log", "specializations")
                     adminMenuItems.filter { it.route !in handledRoutes }.forEach { item ->
                         composable(item.route) { AdminPlaceholderScreen(title = item.title) }
                     }

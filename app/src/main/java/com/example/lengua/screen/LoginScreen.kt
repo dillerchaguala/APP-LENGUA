@@ -7,9 +7,14 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -23,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,6 +47,7 @@ fun LoginScreen(
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) } // State for password visibility
     val uiState by loginViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
@@ -97,6 +104,7 @@ fun LoginScreen(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                     unfocusedTextColor = Color.White,
+                    focusedTextColor = Color.White, // <-- FIXED
                     cursorColor = Color.White
                 ),
                 singleLine = true
@@ -106,17 +114,28 @@ fun LoginScreen(
 
             Text("Contraseña", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 16.dp, bottom = 4.dp))
             TextField(
-                value = password, onValueChange = { password = it }, visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(50),
+                value = password, onValueChange = { password = it },
+                modifier = Modifier.fillMaxWidth(), 
+                shape = RoundedCornerShape(50),
+                singleLine = true,
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                    val description = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
+
+                    IconButton(onClick = { passwordVisible = !passwordVisible }){
+                        Icon(imageVector  = image, description, tint = Color.White.copy(alpha = 0.7f))
+                    }
+                },
                 colors = TextFieldDefaults.colors(
                     unfocusedContainerColor = Color(0x33FFFFFF),
                     focusedContainerColor = Color(0x33FFFFFF),
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                     unfocusedTextColor = Color.White,
+                    focusedTextColor = Color.White, // <-- FIXED
                     cursorColor = Color.White
-                ),
-                singleLine = true
+                )
             )
         }
 
