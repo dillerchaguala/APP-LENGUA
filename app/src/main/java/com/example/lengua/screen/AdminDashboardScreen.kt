@@ -82,15 +82,17 @@ fun AdminDashboardScreen(onLogout: () -> Unit) {
             }
         ) { paddingValues ->
             Box(modifier = Modifier.padding(paddingValues)) {
-                // ✅ SE AÑADE LA NUEVA RUTA DE NAVEGACIÓN
                 NavHost(navController = navController, startDestination = adminMenuItems.first().route) {
                     composable("blocks") { AdminBlocksScreen() }
                     composable("manage_users") { AdminUsersScreen() }
-                    composable("schedule_classes") { ScheduleClassScreen() } // <-- NUEVA PANTALLA
+                    composable("schedule_classes") { ScheduleClassScreen() }
                     composable("gallery_management") { GalleryScreen() }
                     composable("plans_pricing") { PlansAndPricingScreen() }
+                    composable("sales_log") { SalesRecordScreen() }
+                    composable("subscription_management") { SpecializationsScreen() } // <-- CORREGIDO
                     
-                    adminMenuItems.filter { it.route !in listOf("blocks", "manage_users", "schedule_classes", "gallery_management", "plans_pricing") }.forEach { item ->
+                    val handledRoutes = setOf("blocks", "manage_users", "schedule_classes", "gallery_management", "plans_pricing", "sales_log", "subscription_management")
+                    adminMenuItems.filter { it.route !in handledRoutes }.forEach { item ->
                         composable(item.route) { AdminPlaceholderScreen(title = item.title) }
                     }
                 }
