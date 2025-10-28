@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.lengua.data.repository.AuthRepository
 import com.example.lengua.data.repository.Result
 import com.example.lengua.data.repository.SessionManager
-import com.example.lengua.network.ApiService
 import com.example.lengua.network.Evaluation
 import com.example.lengua.network.RetrofitInstance
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +43,9 @@ class EvaluationsViewModel(private val authRepository: AuthRepository) : ViewMod
                 }
                 is Result.Error -> {
                     _uiState.value = EvaluationsUiState(error = result.message, isLoading = false)
+                }
+                is Result.Loading -> {
+                    _uiState.value = _uiState.value.copy(isLoading = true)
                 }
             }
         }

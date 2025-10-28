@@ -113,6 +113,9 @@ class ProfileViewModel(private val authRepository: AuthRepository) : ViewModel()
                 is Result.Error -> {
                     _error.value = result.message
                 }
+                is Result.Loading -> {
+                    _isLoading.value = true
+                }
             }
             _isLoading.value = false
         }

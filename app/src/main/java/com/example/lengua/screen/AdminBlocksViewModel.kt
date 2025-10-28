@@ -4,11 +4,10 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.lengua.data.model.Bloque
 import com.example.lengua.data.repository.AuthRepository
 import com.example.lengua.data.repository.Result
 import com.example.lengua.data.repository.SessionManager
-import com.example.lengua.network.ApiService
-import com.example.lengua.network.Bloque
 import com.example.lengua.network.RetrofitInstance
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -48,6 +47,10 @@ class AdminBlocksViewModel(private val authRepository: AuthRepository) : ViewMod
                 }
                 is Result.Error -> {
                     _uiState.value = AdminBlocksUiState(error = result.message, isLoading = false)
+                }
+                is Result.Loading -> {
+                    // Keep loading state
+                    _uiState.value = _uiState.value.copy(isLoading = true)
                 }
             }
         }

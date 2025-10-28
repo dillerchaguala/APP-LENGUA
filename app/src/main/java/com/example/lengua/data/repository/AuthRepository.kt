@@ -4,8 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import com.example.lengua.data.LoginRequest
+import com.example.lengua.data.model.Bloque
 import com.example.lengua.network.ApiService
-import com.example.lengua.network.Bloque
 import com.example.lengua.network.Clase
 import com.example.lengua.network.Club
 import com.example.lengua.network.Evaluation
@@ -15,18 +15,11 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
 
-// Clase sellada para manejar los resultados de la API
-sealed class Result<out T> {
-    data class Success<out T>(val data: T) : Result<T>()
-    data class Error(val message: String) : Result<Nothing>()
-}
-
 // Modelo para el resultado de un login exitoso
 data class LoginSuccessData(val token: String, val role: String)
 
 // --- SessionManager CON LOGS DETALLADOS ---
 class SessionManager(context: Context) {
-    // Usamos el nombre de preferencias "lengua_prefs" como sugiere la guía
     private val prefs: SharedPreferences = context.getSharedPreferences("lengua_prefs", Context.MODE_PRIVATE)
 
     companion object {
@@ -36,8 +29,6 @@ class SessionManager(context: Context) {
     fun saveToken(token: String) {
         Log.d("SessionManager", "💾 Guardando token: ${token.take(20)}...")
         prefs.edit().putString(KEY_TOKEN, token).apply()
-        
-        // Verificación inmediata para asegurar que se guardó
         val saved = prefs.getString(KEY_TOKEN, null)
         Log.d("SessionManager", "✅ Token guardado y verificado: ${saved?.take(20)}...")
     }
@@ -65,10 +56,7 @@ class AuthRepository(private val apiService: ApiService, private val sessionMana
             val response = apiService.login(LoginRequest(username, password))
             Log.d("AuthRepo", "✅ Login exitoso para ${username}")
             Log.d("AuthRepo", "🔑 Token recibido: ${response.token.take(20)}...")
-            
-            // Guardar token usando el SessionManager mejorado
             sessionManager.saveToken(response.token)
-
             Result.Success(LoginSuccessData(token = response.token, role = response.role ?: "student"))
         } catch (e: Exception) {
             Log.e("AuthRepo", "❌ Error en login: ${e.message}", e)
@@ -78,31 +66,14 @@ class AuthRepository(private val apiService: ApiService, private val sessionMana
 
     suspend fun getUserClubs(): Result<List<Club>> {
         return try {
-            Log.d("AuthRepo", "🔍 Solicitando clubs...")
-            val token = sessionManager.getToken()
-            // El log de "Recuperando token" ya está en SessionManager
-
-            if (token.isNullOrEmpty()) {
-                Log.e("AuthRepo", "❌ Error: El token recuperado es null o vacío.")
-                return Result.Error("No hay token de autenticación")
-            }
-            
-            Log.d("AuthRepo", "📡 Haciendo petición a /api/clubs/ con el token recuperado.")
+            val token = sessionManager.getToken() ?: return Result.Error("No hay token de autenticación")
             val response = apiService.getUserClubs("Bearer $token")
-            
-            Log.d("AuthRepo", "✅ Respuesta de clubs recibida")
-            Log.d("AuthRepo", "Success: ${response.success}")
-            Log.d("AuthRepo", "Total: ${response.total}")
-            Log.d("AuthRepo", "Clubs: ${response.clubs.size}")
-            
             if (response.success) {
                 Result.Success(response.clubs)
             } else {
-                Log.e("AuthRepo", "❌ Error del servidor al obtener clubs: ${response.message}")
                 Result.Error(response.message ?: "Error al obtener clubs")
             }
         } catch (e: Exception) {
-            Log.e("AuthRepo", "❌ Excepción en getUserClubs: ${e.message}", e)
             Result.Error(e.message ?: "Error de conexión")
         }
     }
@@ -152,7 +123,15 @@ class AuthRepository(private val apiService: ApiService, private val sessionMana
         val token = sessionManager.getToken() ?: return Result.Error("No hay token de autenticación")
         return try {
             val response = apiService.getBloques("Bearer $token")
-            if (response.success) Result.Success(response.bloques) else Result.Error("Error del backend al obtener bloques")
+            if (response.isSuccessful && response.body() != null) {
+                 if (response.body()!!.success) {
+                    Result.Success(response.body()!!.bloques)
+                 } else {
+                    Result.Error("Error del backend al obtener bloques")
+                 }
+            } else {
+                 Result.Error("Error de red: ${response.code()}")
+            }
         } catch (e: Exception) {
             Result.Error(e.message ?: "Error de red al obtener bloques")
         }

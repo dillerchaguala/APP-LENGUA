@@ -62,6 +62,7 @@ class ClassesViewModel(private val authRepository: AuthRepository) : ViewModel()
                     )
                 }
                 is Result.Error -> _uiState.value = ClassesUiState(isLoading = false, error = result.message)
+                is Result.Loading -> { /* State is already loading */ }
             }
         }
     }

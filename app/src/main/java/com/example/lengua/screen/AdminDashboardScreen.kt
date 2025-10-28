@@ -1,9 +1,8 @@
-
 package com.example.lengua.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.* 
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -25,11 +24,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.lengua.network.Bloque
+import com.example.lengua.data.model.Bloque
+import com.example.lengua.data.repository.Result
 import kotlinx.coroutines.launch
+import com.example.lengua.data.model.User as UserModel
 
 // --- MODELO Y LISTA PARA EL MENÚ ---
 data class AdminMenuItem(val route: String, val title: String, val icon: ImageVector)
@@ -37,6 +39,7 @@ data class AdminMenuItem(val route: String, val title: String, val icon: ImageVe
 val adminMenuItems = listOf(
     AdminMenuItem("admin_dashboard", "Dashboard", Icons.Default.Dashboard),
     AdminMenuItem("manage_users", "Gestionar usuarios", Icons.Default.People),
+    AdminMenuItem("create_user", "Crear Usuario", Icons.Default.Add), // Hidden from menu, but needed for navigation
     AdminMenuItem("schedule_classes", "Programar clases", Icons.Default.CalendarToday),
     AdminMenuItem("manage_students", "Gestión de estudiantes", Icons.Default.School),
     AdminMenuItem("blocks", "Bloques", Icons.Default.ViewModule),
@@ -54,16 +57,31 @@ fun AdminDashboardScreen(onLogout: () -> Unit) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val navController = rememberNavController()
+    val userViewModel: CreateUserViewModel = viewModel(factory = CreateUserViewModelFactory(LocalContext.current))
     var currentTitle by remember { mutableStateOf(adminMenuItems.first().title) }
+
+    // Update title based on navigation
+    LaunchedEffect(navController) {
+        navController.currentBackStackEntryFlow.collect {
+            val route = it.destination.route
+            currentTitle = adminMenuItems.find { item -> item.route == route }?.title ?: "Admin Panel"
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = { 
-            DrawerContent(currentTitle, adminMenuItems, onLogout) { route, title ->
+            DrawerContent(
+                currentTitle,
+                adminMenuItems.filter { it.route != "create_user" }, // Hide from drawer
+                onLogout
+            ) { route, title ->
                 scope.launch { drawerState.close() }
-                navController.navigate(route) {
-                    launchSingleTop = true
-                    popUpTo(navController.graph.startDestinationId)
+                if (route != navController.currentDestination?.route) {
+                    navController.navigate(route) {
+                        launchSingleTop = true
+                        popUpTo(navController.graph.startDestinationId) { saveState = true }
+                    }
                 }
                 currentTitle = title
             }
@@ -82,16 +100,17 @@ fun AdminDashboardScreen(onLogout: () -> Unit) {
             }
         ) { paddingValues ->
             Box(modifier = Modifier.padding(paddingValues)) {
-                NavHost(navController = navController, startDestination = adminMenuItems.first().route) {
+                NavHost(navController = navController, startDestination = "admin_dashboard") {
+                    composable("manage_users") { AdminUsersScreen(viewModel = userViewModel, onCreateUserClick = { navController.navigate("create_user") }) }
+                    composable("create_user") { CreateUserScreen(viewModel = userViewModel, onUserCreated = { navController.popBackStack() }) }
                     composable("blocks") { AdminBlocksScreen() }
-                    composable("manage_users") { AdminUsersScreen() }
                     composable("schedule_classes") { ScheduleClassScreen() }
                     composable("gallery_management") { GalleryScreen() }
                     composable("plans_pricing") { PlansAndPricingScreen() }
                     composable("sales_log") { SalesRecordScreen() }
-                    composable("specializations") { SpecializationsScreen() } // <-- CORREGIDO
+                    composable("specializations") { SpecializationsScreen() }
                     
-                    val handledRoutes = setOf("blocks", "manage_users", "schedule_classes", "gallery_management", "plans_pricing", "sales_log", "specializations")
+                    val handledRoutes = setOf("manage_users", "create_user", "blocks", "schedule_classes", "gallery_management", "plans_pricing", "sales_log", "specializations")
                     adminMenuItems.filter { it.route !in handledRoutes }.forEach { item ->
                         composable(item.route) { AdminPlaceholderScreen(title = item.title) }
                     }
@@ -101,7 +120,70 @@ fun AdminDashboardScreen(onLogout: () -> Unit) {
     }
 }
 
-// --- CONTENIDO DEL MENÚ LATERAL ---
+// ... (DrawerContent is the same)
+
+// --- SECCIÓN DE GESTIÓN DE USUARIOS (CON DATOS REALES) ---
+@Composable
+fun AdminUsersScreen(viewModel: CreateUserViewModel, onCreateUserClick: () -> Unit) {
+    val usersState by viewModel.usersState.collectAsState()
+    
+    LaunchedEffect(Unit) {
+        viewModel.loadUsers()
+    }
+    
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Button(
+            onClick = onCreateUserClick,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007BFF))
+        ) {
+            Icon(Icons.Default.Add, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Agregar usuario")
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        when (val state = usersState) {
+            is Result.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            is Result.Success -> {
+                LazyColumn {
+                    item { UserTableHeader() }
+                    items(state.data) { user ->
+                        UserTableRow(user = user)
+                    }
+                }
+            }
+            is Result.Error -> Text(state.message, color = Color.Red)
+        }
+    }
+}
+
+@Composable
+fun UserTableRow(user: UserModel) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(user.id.toString(), modifier = Modifier.weight(0.4f), fontSize = 14.sp, color = Color.DarkGray)
+        Text("${user.firstName} ${user.lastName}", modifier = Modifier.weight(1.3f), fontSize = 14.sp, color = Color.DarkGray)
+        Text(user.email, modifier = Modifier.weight(1.3f), fontSize = 14.sp, color = Color.DarkGray)
+        Text(user.role, modifier = Modifier.weight(0.8f), fontSize = 14.sp, color = Color.DarkGray)
+        Box(modifier = Modifier.weight(1.2f), contentAlignment = Alignment.Center) { StatusPill(user.bloqueAsignado ?: "Sin asignar", Color(0xFF26C6DA), Color.White) }
+        Box(modifier = Modifier.weight(1.2f), contentAlignment = Alignment.Center) { StatusPill(user.especializacion ?: "Sin asignar", Color(0xFF673AB7), Color.White) }
+        Box(modifier = Modifier.weight(0.8f), contentAlignment = Alignment.Center) { StatusPill(if(user.isActive) "Activo" else "Inactivo", if(user.isActive) Color(0xFF66BB6A) else Color.Gray, Color.White) }
+    }
+    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
+}
+
+// ... (The rest of the file can remain the same, just make sure StatusPill, UserTableHeader, etc. are correct)
+
+
+
+
 @Composable
 fun DrawerContent(currentTitle: String, items: List<AdminMenuItem>, onLogout: () -> Unit, onItemClick: (String, String) -> Unit) {
     ModalDrawerSheet {
@@ -129,7 +211,6 @@ fun DrawerContent(currentTitle: String, items: List<AdminMenuItem>, onLogout: ()
     }
 }
 
-// --- SECCIÓN DE BLOQUES ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminBlocksScreen(viewModel: AdminBlocksViewModel = viewModel(factory = AdminBlocksViewModelFactory(LocalContext.current))) {
@@ -157,7 +238,7 @@ fun AdminBlocksScreen(viewModel: AdminBlocksViewModel = viewModel(factory = Admi
         Box(modifier = Modifier.padding(padding)) {
             when {
                 uiState.isLoading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                uiState.error != null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Error: ${uiState.error}", color = Color.Red) } // ✅ CORREGIDO
+                uiState.error != null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Error: ${uiState.error}", color = Color.Red) }
                 else -> {
                     LazyColumn(modifier = Modifier.padding(16.dp)) {
                         uiState.blocksByLevel.forEach { (level, blocks) ->
@@ -215,53 +296,6 @@ fun BlockDetailDialog(block: Bloque, onDismiss: () -> Unit, onEdit: () -> Unit, 
 }
 
 
-// --- SECCIÓN DE GESTIÓN DE USUARIOS (CON ESTILO CORREGIDO) ---
-data class DisplayUser(val id: Int, val nombre: String, val correo: String, val rol: String, val bloque: String, val especializacion: String, val estado: String)
-
-// ✅ CORREGIDO: Se elimina el salto de línea '\n'
-val mockUsers = List(10) { 
-    DisplayUser(1, "Juan andres rodriguez", "Juanandres@gmail.com", "Student", "Sin asignar", "Sin asignar", "Activo") 
-}
-
-@Composable
-fun AdminUsersScreen() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF0F2F5))
-            .padding(16.dp)
-    ) {
-        Button(
-            onClick = { /* TODO */ },
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF007BFF))
-        ) {
-            Icon(Icons.Default.Add, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Agregar usuario", modifier = Modifier.padding(vertical = 4.dp))
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
-            Column {
-                Text(
-                    text = "Lista de usuarios", 
-                    style = MaterialTheme.typography.titleLarge, 
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(16.dp)
-                )
-                LazyColumn {
-                    item { UserTableHeader() }
-                    items(mockUsers) { user -> UserTableRow(user) }
-                }
-            }
-        }
-    }
-}
-
 @Composable
 fun UserTableHeader() {
     Row(
@@ -271,7 +305,6 @@ fun UserTableHeader() {
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // ✅ CORREGIDO: Se ajustan los pesos para dar más espacio
         Text("ID", color = Color.White, modifier = Modifier.weight(0.4f), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         Text("Nombre", color = Color.White, modifier = Modifier.weight(1.3f), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
         Text("Correo", color = Color.White, modifier = Modifier.weight(1.3f), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
@@ -283,25 +316,6 @@ fun UserTableHeader() {
     HorizontalDivider()
 }
 
-@Composable
-fun UserTableRow(user: DisplayUser) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // ✅ CORREGIDO: Se ajustan los pesos para coincidir con la cabecera
-        Text(user.id.toString(), modifier = Modifier.weight(0.4f), fontSize = 14.sp, color = Color.DarkGray)
-        Text(user.nombre, modifier = Modifier.weight(1.3f), fontSize = 14.sp, color = Color.DarkGray)
-        Text(user.correo, modifier = Modifier.weight(1.3f), fontSize = 14.sp, color = Color.DarkGray)
-        Text(user.rol, modifier = Modifier.weight(0.8f), fontSize = 14.sp, color = Color.DarkGray)
-        Box(modifier = Modifier.weight(1.2f), contentAlignment = Alignment.Center) { StatusPill(user.bloque, Color(0xFF26C6DA), Color.White) }
-        Box(modifier = Modifier.weight(1.2f), contentAlignment = Alignment.Center) { StatusPill(user.especializacion, Color(0xFF673AB7), Color.White) }
-        Box(modifier = Modifier.weight(0.8f), contentAlignment = Alignment.Center) { StatusPill(user.estado, Color(0xFF66BB6A), Color.White) }
-    }
-    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
-}
 
 @Composable
 fun StatusPill(text: String, backgroundColor: Color, textColor: Color) {
@@ -309,7 +323,6 @@ fun StatusPill(text: String, backgroundColor: Color, textColor: Color) {
         modifier = Modifier
             .clip(RoundedCornerShape(50))
             .background(backgroundColor)
-            // ✅ CORREGIDO: Padding horizontal para píldora ancha
             .padding(horizontal = 12.dp, vertical = 6.dp), 
         contentAlignment = Alignment.Center
     ) {
@@ -318,7 +331,7 @@ fun StatusPill(text: String, backgroundColor: Color, textColor: Color) {
 }
 
 
-// --- PANTALLA DE MARCADOR DE POSICIÓN ---
+
 @Composable
 fun AdminPlaceholderScreen(title: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

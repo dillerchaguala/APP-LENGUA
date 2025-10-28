@@ -71,6 +71,9 @@ fun LoginScreen(
                 is Result.Error -> {
                     Toast.makeText(context, "Error: ${it.message}", Toast.LENGTH_LONG).show()
                 }
+                is Result.Loading -> {
+                    // Handled by isLoading state
+                }
             }
         }
     }

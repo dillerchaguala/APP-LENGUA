@@ -64,6 +64,7 @@ class ClubsViewModel(private val repository: AuthRepository) : ViewModel() {
                     )
                 }
                 is Result.Error -> _uiState.value = ClubsUiState(error = result.message)
+                is Result.Loading -> { /* El estado ya está en isLoading = true */ }
             }
         }
     }

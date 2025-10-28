@@ -54,6 +54,9 @@ class HomeViewModel(private val authRepository: AuthRepository) : ViewModel() {
                     _userState.value = UserState(isLoading = false, email = user.email, firstName = user.firstName)
                 }
                 is Result.Error -> _userState.value = UserState(isLoading = false, error = result.message)
+                is Result.Loading -> {
+                    // Handled by isLoading state
+                }
             }
         }
     }

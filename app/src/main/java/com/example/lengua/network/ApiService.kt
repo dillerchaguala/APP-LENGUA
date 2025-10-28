@@ -2,6 +2,11 @@ package com.example.lengua.network
 
 import com.example.lengua.data.LoginRequest
 import com.example.lengua.data.LoginResponse
+import com.example.lengua.data.model.BloquesResponse
+import com.example.lengua.data.model.CreateUserRequest
+import com.example.lengua.data.model.CreateUserResponse
+import com.example.lengua.data.model.EspecializacionesResponse
+import com.example.lengua.data.model.User as UserModel
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
@@ -92,21 +97,9 @@ data class Evaluation(
     val calificacion: Float?, @SerialName("created_at") val createdAt: String
 )
 
-// --- Modelos de Datos para los Bloques ---
+// --- Modelos de Datos para los Bloques (Create / Detail) ---
 @Serializable
-data class Bloque(
-    val id: Int, val nombre: String, val nivel: String, val estado: String,
-    @SerialName("grupo_color") val grupoColor: String, @SerialName("horario_inicio") val horarioInicio: String?,
-    @SerialName("horario_fin") val horarioFin: String?, @SerialName("cupo_maximo") val cupoMaximo: Int,
-    val activo: Boolean, @SerialName("estudiantes_count") val estudiantesCount: Int,
-    @SerialName("created_at") val createdAt: String, @SerialName("updated_at") val updatedAt: String
-)
-
-@Serializable
-data class BloquesResponse(val success: Boolean, val total: Int, val bloques: List<Bloque>)
-
-@Serializable
-data class BloqueDetailResponse(val success: Boolean, val bloque: Bloque)
+data class BloqueDetailResponse(val success: Boolean, val bloque: com.example.lengua.data.model.Bloque)
 
 @Serializable
 data class BloqueCreateRequest(
@@ -118,7 +111,6 @@ data class BloqueCreateRequest(
 // --- MODELOS DE DATOS PARA CLUBS ---
 @Serializable
 data class ClubsResponse(
-    // ✅ VALORES POR DEFECTO AÑADIDOS
     val success: Boolean = false,
     val total: Int = 0,
     val clubs: List<Club> = emptyList(),
@@ -149,18 +141,14 @@ data class ClubMaterial(
 )
 
 // --- Modelos de Datos para Profesores y Estudiantes ---
-
 @Serializable
 data class Professor(
     val id: Int,
     val username: String,
     val email: String,
-    @SerialName("first_name")
-    val firstName: String,
-    @SerialName("last_name")
-    val lastName: String,
-    @SerialName("full_name")
-    val fullName: String
+    @SerialName("first_name") val firstName: String,
+    @SerialName("last_name") val lastName: String,
+    @SerialName("full_name") val fullName: String
 )
 
 @Serializable
@@ -175,12 +163,9 @@ data class Student(
     val id: Int,
     val username: String,
     val email: String,
-    @SerialName("first_name")
-    val firstName: String,
-    @SerialName("last_name")
-    val lastName: String,
-    @SerialName("full_name")
-    val fullName: String
+    @SerialName("first_name") val firstName: String,
+    @SerialName("last_name") val lastName: String,
+    @SerialName("full_name") val fullName: String
 )
 
 @Serializable
@@ -189,7 +174,6 @@ data class StudentsResponse(
     val total: Int,
     val students: List<Student>
 )
-
 
 // --- Interfaz del Servicio API ---
 interface ApiService {
@@ -209,8 +193,11 @@ interface ApiService {
     suspend fun getUserEvaluations(@Header("Authorization") token: String): JsonElement
 
     @GET("bloques/")
-    suspend fun getBloques(@Header("Authorization") token: String): BloquesResponse
+    suspend fun getBloques(@Header("Authorization") token: String): Response<BloquesResponse>
     
+    @GET("especializaciones/activas/")
+    suspend fun getEspecializaciones(@Header("Authorization") token: String): Response<EspecializacionesResponse>
+
     @GET("clubs/")
     suspend fun getUserClubs(@Header("Authorization") token: String): ClubsResponse
 
@@ -229,7 +216,6 @@ interface ApiService {
     @POST("bloques/{id}/delete/")
     suspend fun deleteBloque(@Header("Authorization") token: String, @Path("id") id: Int): Response<Unit>
 
-    // Endpoints for scheduling classes - CORRECTED
     @POST("classes/create/")
     suspend fun createClass(
         @Header("Authorization") token: String,
@@ -241,4 +227,29 @@ interface ApiService {
 
     @GET("students/")
     suspend fun getStudents(@Header("Authorization") token: String): StudentsResponse
+
+    // User Management Endpoints
+    @GET("users/")
+    suspend fun getUsers(
+        @Header("Authorization") token: String
+    ): Response<List<UserModel>>
+
+    @POST("auth/register/")
+    suspend fun createUser(
+        @Header("Authorization") token: String,
+        @Body request: CreateUserRequest
+    ): Response<CreateUserResponse>
+
+    @POST("users/{id}/toggle-active/")
+    suspend fun toggleUserActive(
+        @Header("Authorization") token: String,
+        @Path("id") userId: Int
+    ): Response<ApiResponse<UserModel>>
 }
+
+@Serializable
+data class ApiResponse<T>(
+    val success: Boolean,
+    val data: T? = null,
+    val message: String? = null
+)

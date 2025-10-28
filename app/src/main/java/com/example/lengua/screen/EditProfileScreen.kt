@@ -3,10 +3,8 @@ package com.example.lengua.screen
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -26,7 +24,6 @@ import com.example.lengua.data.repository.AuthRepository
 import com.example.lengua.data.repository.Result
 import com.example.lengua.data.repository.SessionManager
 import com.example.lengua.network.RetrofitInstance
-import com.example.lengua.network.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -84,6 +81,7 @@ class EditProfileViewModel(private val authRepository: AuthRepository) : ViewMod
                     )
                 }
                 is Result.Error -> _error.value = result.message
+                is Result.Loading -> _isLoading.value = true
             }
             _isLoading.value = false
         }
@@ -114,6 +112,7 @@ class EditProfileViewModel(private val authRepository: AuthRepository) : ViewMod
             when (val result = authRepository.updateUserProfile(profileData)) {
                 is Result.Success -> _saveSuccess.value = true
                 is Result.Error -> _error.value = result.message
+                is Result.Loading -> _isLoading.value = true
             }
             _isLoading.value = false
         }
