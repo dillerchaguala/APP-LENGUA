@@ -2,21 +2,15 @@ package com.example.lengua.network
 
 import com.example.lengua.data.LoginRequest
 import com.example.lengua.data.LoginResponse
-import com.example.lengua.data.model.BloquesResponse
-import com.example.lengua.data.model.CreateUserRequest
-import com.example.lengua.data.model.CreateUserResponse
-import com.example.lengua.data.model.EspecializacionesResponse
+import com.example.lengua.data.model.*
 import com.example.lengua.data.model.User as UserModel
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.Header
-import retrofit2.http.POST
-import retrofit2.http.PUT
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import retrofit2.http.*
 import retrofit2.Response
-import retrofit2.http.Path
 
 // --- Modelos de Datos para el Perfil ---
 @Serializable
@@ -200,6 +194,35 @@ interface ApiService {
 
     @GET("clubs/")
     suspend fun getUserClubs(@Header("Authorization") token: String): ClubsResponse
+
+    // --- Gallery Endpoints ---
+    @GET("gallery/") // ✅ CORRECTO
+    suspend fun getGalleryItems(): Response<GalleryResponse>
+
+    @POST("media/")
+    suspend fun createMediaItem(
+        @Header("Authorization") token: String,
+        @Body request: CreateMediaRequest
+    ): Response<MediaItem>
+    
+    @Multipart
+    @POST("media/")
+    suspend fun createMediaItemWithFile(
+        @Header("Authorization") token: String,
+        @Part("type") type: RequestBody,
+        @Part("title") title: RequestBody,
+        @Part("description") description: RequestBody,
+        @Part("author") author: RequestBody,
+        @Part("category") category: RequestBody,
+        @Part file: MultipartBody.Part,
+        @Part thumbnail: MultipartBody.Part? = null
+    ): Response<MediaItem>
+
+    @DELETE("media/{id}/")
+    suspend fun deleteMediaItem(
+        @Header("Authorization") token: String,
+        @Path("id") itemId: Int
+    ): Response<Unit>
 
     @POST("bloques/create/")
     suspend fun createBloque(@Header("Authorization") token: String, @Body bloque: BloqueCreateRequest): BloqueDetailResponse

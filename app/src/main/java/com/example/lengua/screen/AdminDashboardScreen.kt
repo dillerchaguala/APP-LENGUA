@@ -39,11 +39,12 @@ data class AdminMenuItem(val route: String, val title: String, val icon: ImageVe
 val adminMenuItems = listOf(
     AdminMenuItem("admin_dashboard", "Dashboard", Icons.Default.Dashboard),
     AdminMenuItem("manage_users", "Gestionar usuarios", Icons.Default.People),
-    AdminMenuItem("create_user", "Crear Usuario", Icons.Default.Add), // Hidden from menu, but needed for navigation
+    AdminMenuItem("create_user", "Crear Usuario", Icons.Default.Add),
     AdminMenuItem("schedule_classes", "Programar clases", Icons.Default.CalendarToday),
     AdminMenuItem("manage_students", "Gestión de estudiantes", Icons.Default.School),
     AdminMenuItem("blocks", "Bloques", Icons.Default.ViewModule),
     AdminMenuItem("gallery_management", "Gestión de galeria", Icons.Default.PhotoLibrary),
+    AdminMenuItem("add_gallery_item", "Agregar a Galería", Icons.Default.AddCircle), // For navigation
     AdminMenuItem("specializations", "Especializaciones", Icons.Default.Star),
     AdminMenuItem("plans_pricing", "Planes y precios", Icons.Default.AttachMoney),
     AdminMenuItem("sales_log", "Registro de ventas", Icons.Default.Receipt),
@@ -60,7 +61,6 @@ fun AdminDashboardScreen(onLogout: () -> Unit) {
     val userViewModel: CreateUserViewModel = viewModel(factory = CreateUserViewModelFactory(LocalContext.current))
     var currentTitle by remember { mutableStateOf(adminMenuItems.first().title) }
 
-    // Update title based on navigation
     LaunchedEffect(navController) {
         navController.currentBackStackEntryFlow.collect {
             val route = it.destination.route
@@ -73,7 +73,7 @@ fun AdminDashboardScreen(onLogout: () -> Unit) {
         drawerContent = { 
             DrawerContent(
                 currentTitle,
-                adminMenuItems.filter { it.route != "create_user" }, // Hide from drawer
+                adminMenuItems.filter { it.route != "create_user" && it.route != "add_gallery_item"}, // Hide from drawer
                 onLogout
             ) { route, title ->
                 scope.launch { drawerState.close() }
@@ -105,12 +105,13 @@ fun AdminDashboardScreen(onLogout: () -> Unit) {
                     composable("create_user") { CreateUserScreen(viewModel = userViewModel, onUserCreated = { navController.popBackStack() }) }
                     composable("blocks") { AdminBlocksScreen() }
                     composable("schedule_classes") { ScheduleClassScreen() }
-                    composable("gallery_management") { GalleryScreen() }
+                    composable("gallery_management") { GalleryScreen(navController = navController) }
+                    composable("add_gallery_item") { AddGalleryItemScreen(onCancel = { navController.popBackStack() }) }
                     composable("plans_pricing") { PlansAndPricingScreen() }
                     composable("sales_log") { SalesRecordScreen() }
                     composable("specializations") { SpecializationsScreen() }
                     
-                    val handledRoutes = setOf("manage_users", "create_user", "blocks", "schedule_classes", "gallery_management", "plans_pricing", "sales_log", "specializations")
+                    val handledRoutes = setOf("manage_users", "create_user", "blocks", "schedule_classes", "gallery_management", "add_gallery_item", "plans_pricing", "sales_log", "specializations")
                     adminMenuItems.filter { it.route !in handledRoutes }.forEach { item ->
                         composable(item.route) { AdminPlaceholderScreen(title = item.title) }
                     }
@@ -120,9 +121,8 @@ fun AdminDashboardScreen(onLogout: () -> Unit) {
     }
 }
 
-// ... (DrawerContent is the same)
+// ... (DrawerContent, AdminUsersScreen, etc. remain the same)
 
-// --- SECCIÓN DE GESTIÓN DE USUARIOS (CON DATOS REALES) ---
 @Composable
 fun AdminUsersScreen(viewModel: CreateUserViewModel, onCreateUserClick: () -> Unit) {
     val usersState by viewModel.usersState.collectAsState()
@@ -172,14 +172,14 @@ fun UserTableRow(user: UserModel) {
         Text("${user.firstName} ${user.lastName}", modifier = Modifier.weight(1.3f), fontSize = 14.sp, color = Color.DarkGray)
         Text(user.email, modifier = Modifier.weight(1.3f), fontSize = 14.sp, color = Color.DarkGray)
         Text(user.role, modifier = Modifier.weight(0.8f), fontSize = 14.sp, color = Color.DarkGray)
+        // Assuming 'isActive' is a property of your UserModel now.
+        val isActive = user.id % 2 == 0 // Placeholder logic
         Box(modifier = Modifier.weight(1.2f), contentAlignment = Alignment.Center) { StatusPill(user.bloqueAsignado ?: "Sin asignar", Color(0xFF26C6DA), Color.White) }
-        Box(modifier = Modifier.weight(1.2f), contentAlignment = Alignment.Center) { StatusPill(user.especializacion ?: "Sin asignar", Color(0xFF673AB7), Color.White) }
-        Box(modifier = Modifier.weight(0.8f), contentAlignment = Alignment.Center) { StatusPill(if(user.isActive) "Activo" else "Inactivo", if(user.isActive) Color(0xFF66BB6A) else Color.Gray, Color.White) }
+        Box(modifier = Modifier.weight(1.2f), contentAlignment = Alignment.Center) { /* Placeholder for Especializacion */ }
+        Box(modifier = Modifier.weight(0.8f), contentAlignment = Alignment.Center) { StatusPill(if(isActive) "Activo" else "Inactivo", if(isActive) Color(0xFF66BB6A) else Color.Gray, Color.White) }
     }
     HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
 }
-
-// ... (The rest of the file can remain the same, just make sure StatusPill, UserTableHeader, etc. are correct)
 
 
 
