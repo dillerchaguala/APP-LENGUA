@@ -2,13 +2,14 @@ package com.example.lengua.data.repository
 
 import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
 import com.example.lengua.data.model.CreateMediaRequest
 import com.example.lengua.data.model.MediaItem
 import com.example.lengua.network.ApiService
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 
 class GalleryRepository(
@@ -48,6 +49,21 @@ class GalleryRepository(
         }
     }
 
+    private fun createPartFromUri(uri: Uri, partName: String): MultipartBody.Part? {
+        val fileName = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (nameIndex != -1) cursor.getString(nameIndex) else partName
+            } else partName
+        } ?: partName
+
+        return context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            val fileBytes = inputStream.readBytes()
+            val requestBody = fileBytes.toRequestBody(context.contentResolver.getType(uri)?.toMediaTypeOrNull())
+            MultipartBody.Part.createFormData(partName, fileName, requestBody)
+        }
+    }
+
     suspend fun createMediaItemWithFile(
         type: String, title: String, description: String, author: String, category: String,
         fileUri: Uri, thumbnailUri: Uri? = null
@@ -63,21 +79,12 @@ class GalleryRepository(
             val categoryBody = category.toRequestBody("text/plain".toMediaTypeOrNull())
 
             // Create MultipartBody.Part for the main file
-            val filePart = context.contentResolver.openInputStream(fileUri)?.use {
-                val fileBytes = it.readBytes()
-                val requestFile = fileBytes.toRequestBody(context.contentResolver.getType(fileUri)?.toMediaTypeOrNull())
-                MultipartBody.Part.createFormData("file", "file", requestFile)
-            } ?: return Result.Error("No se pudo leer el archivo seleccionado")
+            val filePart = createPartFromUri(fileUri, "file")
+                ?: return Result.Error("No se pudo leer el archivo seleccionado")
 
             // Create MultipartBody.Part for the optional thumbnail
-            val thumbnailPart = thumbnailUri?.let { uri ->
-                context.contentResolver.openInputStream(uri)?.use {
-                    val thumbBytes = it.readBytes()
-                    val requestThumb = thumbBytes.toRequestBody(context.contentResolver.getType(uri)?.toMediaTypeOrNull())
-                    MultipartBody.Part.createFormData("thumbnail", "thumbnail", requestThumb)
-                }
-            }
-            
+            val thumbnailPart = thumbnailUri?.let { createPartFromUri(it, "thumbnail") }
+
             val response = apiService.createMediaItemWithFile(
                 token = "Bearer $token",
                 type = typeBody,
@@ -92,7 +99,7 @@ class GalleryRepository(
             if (response.isSuccessful && response.body() != null) {
                 Result.Success(response.body()!!)
             } else {
-                 Result.Error("Error de red al subir el archivo: ${response.code()} - ${response.errorBody()?.string()}")
+                Result.Error("Error de red al subir el archivo: ${response.code()} - ${response.errorBody()?.string()}")
             }
         } catch (e: Exception) {
             Result.Error("Error de conexión al subir el archivo: ${e.message}")
